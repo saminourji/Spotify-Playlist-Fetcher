@@ -2,7 +2,6 @@ import cv2 as cv
 import numpy as np
 import math
 
-
 # 1. INTIALIZE VARIABLES
 cap = cv.VideoCapture("sample vids/slow_fullscreen_sample_vid.mp4")
 count = 0
@@ -55,9 +54,36 @@ for i in range (1,len(selected_frames)):
 selected_frames = [x for x in selected_frames if x != 0]
 # print(lst, len(lst))
 
+# 4. TEXT RECOGNITION OF SONG TITLE / ARTIST
+    # ref: https://medium.com/@draj0718/text-recognition-and-extraction-in-images-93d71a337fc8
+
+#Using Tesseract:
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'/usr/local/Cellar/tesseract/5.3.1_1/bin/tesseract'
+config = ('-l eng — oem 3 — psm 3')
+
+
+igm = cv.imread("Screenshot 2023-07-10 at 8.38.07 PM.jpg")
+print(pytesseract.image_to_string(igm, config=config).replace("\n"," "))
+
+img_text = []
 # show selected frames
 for n in selected_frames:
     img = cv.imread("frames/frame %s.jpg" % str(n))
-    cv.imshow("frame", img)
+    # get grayscale image
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    # #noise removal
+    # noise = cv.medianBlur(gray,3)
+    # converting it to binary image by thresholding
+    thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
+    # text = pytesseract.image_to_string(thresh, config=config)
+    print(n,"\n --------------------------------- \n", pytesseract.image_to_string(thresh, config=config).replace("\n"," "), "\n --------------------------------- \n", pytesseract.image_to_string(img, config=config).replace("\n"," "))
+    cv.imshow("frame", thresh)
     cv.waitKey(0)
     cv.destroyAllWindows()
+
+
+
+
+
+#potential solution to text read off of cover image: use object recogition to find player --> then only select part of the imnage containingv the title and artist (relative positioning)
