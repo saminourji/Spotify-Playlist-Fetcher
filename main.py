@@ -3,13 +3,13 @@ import numpy as np
 import math
 
 
-#INTIALIZE VARIABLES
+# 1. INTIALIZE VARIABLES
 cap = cv.VideoCapture("sample vids/slow_fullscreen_sample_vid.mp4")
 count = 0
-success, frame = cap.read()00
+success, frame = cap.read()
 interval = 3
 
-# SAVE FRAMES AS IMAGES
+# 2. SAVE FRAMES AS IMAGES
 while success:
     count += 1
     # prev_frame = frame
@@ -18,11 +18,11 @@ while success:
     success, frame = cap.read()
 cap.release()
 
-# COMPARE IMAGES TO REMOVE DUPLICATES
+# 3. COMPARE IMAGES TO REMOVE DUPLICATES
 def mse(img1, img2):
     """
     EFFECT: Computes the mean squared error of the two images
-    OUTPUT: mse, subtraction of first and second img
+    OUTPUT: tuple (mse, subtraction of first and second img)
     """
     assert(img1.shape == img2.shape)
     dim = img1.shape
@@ -32,22 +32,32 @@ def mse(img1, img2):
 
 def show_comparaison(img1, img2):
     err, diff = mse(img1, img2)
-    print("Image matching error:", err)
+    print("Image matching error:", str(err > 2), "%.2f" % err)
     cv.imshow("Difference", diff)
     cv.waitKey(0)
     cv.destroyAllWindows()
 
-lst = [1]
-print((count-1)//interval)
-#goes through every single create frame
-for i in range(1,math.ceil(count//interval)-1):
-    difference = mse(cv.imread("frames/frame %s.jpg" % str(i),0),cv.imread("frames/frame %s.jpg" % str(i+1),0))
-    if difference[0] > 2 and lst[-1] + 1 != i:
-        lst.append(i)
-print(lst)
+selected_frames = []
+# print((count-1)//interval)
 
-for n in lst:
-    img = cv.imread("frames/frame %s.jpg" % str(n), 0)
+# compares frames and keeps those with mse >= 1
+for i in range(1,math.ceil(count//interval)-1):
+    # show_comparaison(cv.imread("frames/frame %s.jpg" % str(i),0),cv.imread("frames/frame %s.jpg" % str(i+1),0))
+    difference = mse(cv.imread("frames/frame %s.jpg" % str(i)),cv.imread("frames/frame %s.jpg" % str(i+1)))
+    if difference[0] >= 1:
+        selected_frames.append(i+1)
+# print(lst, len(lst))
+
+# removes consecutive frames (by 1 or 2) from the left; ex: 1,2 and 1,3 is removed while 1,4 is not
+for i in range (1,len(selected_frames)):
+    if selected_frames[i] - 1 == selected_frames[i-1] or selected_frames[i] - 2 == selected_frames[i-1]:
+        selected_frames[i-1] = 0
+selected_frames = [x for x in selected_frames if x != 0]
+# print(lst, len(lst))
+
+# show selected frames
+for n in selected_frames:
+    img = cv.imread("frames/frame %s.jpg" % str(n))
     cv.imshow("frame", img)
     cv.waitKey(0)
     cv.destroyAllWindows()
