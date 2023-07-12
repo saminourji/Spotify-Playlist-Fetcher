@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 import math
+import imutils
 
 # 1. INTIALIZE VARIABLES
 cap = cv.VideoCapture("sample vids/slow_fullscreen_sample_vid.mp4")
@@ -56,6 +57,7 @@ selected_frames = [x for x in selected_frames if x != 0]
 
 # 4. TEXT RECOGNITION OF SONG TITLE / ARTIST
     # ref: https://medium.com/@draj0718/text-recognition-and-extraction-in-images-93d71a337fc8
+    # ref: 
 
 #Using Tesseract:
 import pytesseract
@@ -67,23 +69,73 @@ igm = cv.imread("Screenshot 2023-07-10 at 8.38.07 PM.jpg")
 print(pytesseract.image_to_string(igm, config=config).replace("\n"," "))
 
 img_text = []
-# show selected frames
+"""# show selected frames
 for n in selected_frames:
     img = cv.imread("frames/frame %s.jpg" % str(n))
-    # get grayscale image
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     # #noise removal
     # noise = cv.medianBlur(gray,3)
-    # converting it to binary image by thresholding
     thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
-    # text = pytesseract.image_to_string(thresh, config=config)
-    print(n,"\n --------------------------------- \n", pytesseract.image_to_string(thresh, config=config).replace("\n"," "), "\n --------------------------------- \n", pytesseract.image_to_string(img, config=config).replace("\n"," "))
-    cv.imshow("frame", thresh)
+    canny = cv.Canny(img, 50, 200)
+    # print(n,"\n --------------------------------- \n", pytesseract.image_to_string(thresh, config=config).replace("\n"," "), "\n --------------------------------- \n", pytesseract.image_to_string(img, config=config).replace("\n"," "))
+    cv.imshow("frame", canny)
     cv.waitKey(0)
     cv.destroyAllWindows()
-
+"""
 
 
 
 
 #potential solution to text read off of cover image: use object recogition to find player --> then only select part of the imnage containingv the title and artist (relative positioning)
+#Shape detection:
+for n in selected_frames:
+    img = cv.imread("frames/frame %s.jpg" % str(n))
+    ih, iw = img.shape[:2]
+    # img = img[int(h*3/5):h, 0:w] #crop image
+    # cv.imshow("Countoured", img)
+
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
+    canny = cv.Canny(img, 50, 200)
+
+        #USING CONTOURS 
+    # contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+    # for cnt in contours[1:]:
+    #     approx = cv.approxPolyDP(cnt, 0.01 * cv.arcLength(cnt, True), True)
+    #     cv.drawContours(img, [cnt], 0 , (0,0,255), 5)
+
+    #     M = cv.moments(cnt)
+    #     if M['m00'] != 0.0:
+    #         x = int(M['m10']/M['m00'])
+    #         y = int(M['m01']/M['m00'])
+    #     cv.putText(img, str(len(approx)), (x, y),cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    # cv.imshow("Countoured", img)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
+
+
+        #USING TEMPLATE RECOGNITION
+    template = cv.imread("play button.png")
+    th, tw = template.shape[:2]
+    # print(template.shape[:2], img.shape[:2])
+
+    best = None
+    for scale in  np.linspace(0.2, iw/tw, 20)[::-1]:
+        resized = imutils.resize(template, width = int(gray.shape[1] * scale))
+        edged = cv.Canny(resized, 50, 200)
+        result= cv.matchTemplate(canny, edged, cv.TM_CCOEFF)
+        _, max_val, _, max_loc= cv.minMaxLoc(result) 
+        if best is None or max_val > best[0]:
+            best = (max_val, max_loc, scale)
+
+    #viz
+    _, max_loc, scale = best
+    top_left = max_loc
+    bottom_right= (int(top_left[0] + tw*scale), int(top_left[1] + th*scale))
+    cv.rectangle(img, top_left, bottom_right, (0,0,255),5)
+        
+
+    cv.imshow('test', img)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
