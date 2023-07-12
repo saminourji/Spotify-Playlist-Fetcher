@@ -2,8 +2,34 @@ import cv2 as cv
 import numpy as np
 import math
 import imutils
+import os
+import shutil
+import pytesseract
+import pandas as pd
+import easyocr
 
-# 1. INTIALIZE VARIABLES
+# 1. INTIALIZE VARIABLES AND FOLDERS
+try: 
+    shutil.rmtree("./frames")
+    print("deleted dir 'frames'")
+except: pass
+
+try:
+    shutil.rmtree("./selected")
+    print("deleted dir 'selected'")
+
+except: pass
+try:
+    os.mkdir("frames")
+    print("created dir 'frames'")
+except: pass
+try:
+    os.mkdir("selected")
+    print("created dir 'selected'")
+except: pass
+
+
+
 cap = cv.VideoCapture("sample vids/slow_fullscreen_sample_vid.mp4")
 count = 0
 success, frame = cap.read()
@@ -48,27 +74,87 @@ for i in range(1,math.ceil(count//interval)-1):
         selected_frames.append(i+1)
 # print(lst, len(lst))
 
-# removes consecutive frames (by 1 or 2) from the left; ex: 1,2 and 1,3 is removed while 1,4 is not
+# removes consecutive frames (by 1 or 2) and keeps last; ex: 1,2 -> 2, 1,2,4 -> 4, 1,4 -> 1,4 
 for i in range (1,len(selected_frames)):
     if selected_frames[i] - 1 == selected_frames[i-1] or selected_frames[i] - 2 == selected_frames[i-1]:
         selected_frames[i-1] = 0
 selected_frames = [x for x in selected_frames if x != 0]
 # print(lst, len(lst))
 
-# 4. TEXT RECOGNITION OF SONG TITLE / ARTIST
+
+
+# 4. CROP AND SAVE SELECTED FRAMES TO ONLY KEEP SONG TITLE / ARTIST
+    # ref: https://pyimagesearch.com/2015/01/26/multi-scale-template-matching-using-python-opencv/
+
+# multi scale template detection:
+j = 0
+for n in selected_frames:
+    j+=1
+
+    img = cv.imread("frames/frame %s.jpg" % str(n))
+    ih, iw = img.shape[:2]
+
+    canny = cv.Canny(img, 50, 200)
+    template = cv.imread("play button.png")
+    th, tw = template.shape[:2]
+
+    best = None
+    for scale in  np.linspace(0.3, iw/tw, 20)[::-1]:
+        resized = imutils.resize(template, width = int(template.shape[1] * scale))
+        edged = cv.Canny(resized, 50, 200)
+        result= cv.matchTemplate(canny, edged, cv.TM_CCOEFF)
+        _, max_val, _, max_loc= cv.minMaxLoc(result) 
+        if best is None or max_val > best[0]:
+            best = (max_val, max_loc, scale)
+
+    # #viz play button box
+    # _, max_loc, scale = best
+    # top_left = max_loc
+    # bottom_right= (int(top_left[0] + tw*scale), int(top_left[1] + th*scale))
+    # cv.rectangle(img, top_left, bottom_right, (0,0,255),5)
+    
+    # #viz title-artist box
+    # top_left = (0, int(button_y-0.15*ih))
+    # bottom_right = (iw, int(button_y-0.05*ih))
+    # cv.rectangle(img, top_left, bottom_right, (0,0,255),5)
+
+    _, max_loc, scale = best
+    button_y = max_loc[1]
+    cropped_img = img[int(button_y-0.15*ih):int(button_y-0.05*ih),]
+    cv.imwrite("./selected/slct %s.jpg" % str(j), cropped_img)
+    # cv.imshow('test', cropped_img)
+    # cv.waitKey(0)
+    # cv.destroyAllWindows()
+    print("Cropping selected frame", j)
+
+
+# 5. TEXT RECOGNITION OF SONG TITLE / ARTIST
     # ref: https://medium.com/@draj0718/text-recognition-and-extraction-in-images-93d71a337fc8
-    # ref: 
-
-#Using Tesseract:
-import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r'/usr/local/Cellar/tesseract/5.3.1_1/bin/tesseract'
-config = ('-l eng — oem 3 — psm 3')
 
 
-igm = cv.imread("Screenshot 2023-07-10 at 8.38.07 PM.jpg")
-print(pytesseract.image_to_string(igm, config=config).replace("\n"," "))
+titles = []
+for i in range(1, len(selected_frames)+1):
+    img = cv.imread("selected/slct %s.jpg" % str(i))
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    noise = cv.medianBlur(gray,3)
+    thresh = cv.threshold(noise, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
 
-img_text = []
+    #Tesseract:
+    pytesseract.pytesseract.tesseract_cmd = r'/usr/local/Cellar/tesseract/5.3.1_1/bin/tesseract'
+    config = ('-l eng — oem 3 — psm 3')
+    resultTSCT = pytesseract.image_to_string(thresh, config=config).replace("\n", " ").replace("|", "I")
+
+    # #EasyOCR:
+    # reader = easyocr.Reader(['en'])
+    # resultEOCR = pd.DataFrame(reader.readtext(img,paragraph = "False"))[1]
+    
+    titles.append(resultTSCT)
+titles = list(set(titles))
+print(titles)
+    
+    
+
+
 """# show selected frames
 for n in selected_frames:
     img = cv.imread("frames/frame %s.jpg" % str(n))
@@ -82,60 +168,3 @@ for n in selected_frames:
     cv.waitKey(0)
     cv.destroyAllWindows()
 """
-
-
-
-
-#potential solution to text read off of cover image: use object recogition to find player --> then only select part of the imnage containingv the title and artist (relative positioning)
-#Shape detection:
-for n in selected_frames:
-    img = cv.imread("frames/frame %s.jpg" % str(n))
-    ih, iw = img.shape[:2]
-    # img = img[int(h*3/5):h, 0:w] #crop image
-    # cv.imshow("Countoured", img)
-
-    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
-    canny = cv.Canny(img, 50, 200)
-
-        #USING CONTOURS 
-    # contours, _ = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-
-    # for cnt in contours[1:]:
-    #     approx = cv.approxPolyDP(cnt, 0.01 * cv.arcLength(cnt, True), True)
-    #     cv.drawContours(img, [cnt], 0 , (0,0,255), 5)
-
-    #     M = cv.moments(cnt)
-    #     if M['m00'] != 0.0:
-    #         x = int(M['m10']/M['m00'])
-    #         y = int(M['m01']/M['m00'])
-    #     cv.putText(img, str(len(approx)), (x, y),cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-    # cv.imshow("Countoured", img)
-    # cv.waitKey(0)
-    # cv.destroyAllWindows()
-
-
-        #USING TEMPLATE RECOGNITION
-    template = cv.imread("play button.png")
-    th, tw = template.shape[:2]
-    # print(template.shape[:2], img.shape[:2])
-
-    best = None
-    for scale in  np.linspace(0.2, iw/tw, 20)[::-1]:
-        resized = imutils.resize(template, width = int(gray.shape[1] * scale))
-        edged = cv.Canny(resized, 50, 200)
-        result= cv.matchTemplate(canny, edged, cv.TM_CCOEFF)
-        _, max_val, _, max_loc= cv.minMaxLoc(result) 
-        if best is None or max_val > best[0]:
-            best = (max_val, max_loc, scale)
-
-    #viz
-    _, max_loc, scale = best
-    top_left = max_loc
-    bottom_right= (int(top_left[0] + tw*scale), int(top_left[1] + th*scale))
-    cv.rectangle(img, top_left, bottom_right, (0,0,255),5)
-        
-
-    cv.imshow('test', img)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
