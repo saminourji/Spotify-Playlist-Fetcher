@@ -37,6 +37,7 @@ def get_music_titles(video:str):
     interval = 3
 
     # 2. SAVE FRAMES AS IMAGES
+    print("extracting frames")
     while success:
         count += 1
         # prev_frame = frame
@@ -68,6 +69,7 @@ def get_music_titles(video:str):
     # print((count-1)//interval)
 
     # compares frames and keeps those with mse >= 1
+    print("removing duplicate frames")
     for i in range(1,math.ceil(count//interval)-1):
         # show_comparaison(cv.imread("frames/frame %s.jpg" % str(i),0),cv.imread("frames/frame %s.jpg" % str(i+1),0))
         difference = mse(cv.imread("frames/frame %s.jpg" % str(i)),cv.imread("frames/frame %s.jpg" % str(i+1)))
@@ -75,6 +77,7 @@ def get_music_titles(video:str):
             selected_frames.append(i+1)
     # print(lst, len(lst))
 
+    print("removing consecutive frames")
     # removes consecutive frames (by 1 or 2) and keeps last; ex: 1,2 -> 2, 1,2,4 -> 4, 1,4 -> 1,4 
     for i in range (1,len(selected_frames)):
         if selected_frames[i] - 1 == selected_frames[i-1] or selected_frames[i] - 2 == selected_frames[i-1]:
@@ -100,7 +103,7 @@ def get_music_titles(video:str):
         th, tw = template.shape[:2]
 
         best = None
-        for scale in  np.linspace(0.3, iw/tw, 20)[::-1]:
+        for scale in  np.linspace(0.3, iw/tw, 10)[::-1]:
             resized = imutils.resize(template, width = int(template.shape[1] * scale))
             edged = cv.Canny(resized, 50, 200)
             result= cv.matchTemplate(canny, edged, cv.TM_CCOEFF)
