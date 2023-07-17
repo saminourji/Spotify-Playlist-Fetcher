@@ -34,7 +34,7 @@ def get_music_titles(video:str):
     cap = cv.VideoCapture(video)
     count = 0
     success, frame = cap.read()
-    interval = 3
+    interval = 1
 
     # 2. SAVE FRAMES AS IMAGES
     print("extracting frames")

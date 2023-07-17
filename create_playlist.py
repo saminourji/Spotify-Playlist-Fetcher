@@ -16,7 +16,7 @@ def search_track_url(query):
 
 new_playlist = sp.user_playlist_create(user_id, "Fetched playlist #3", True, False, "")
 
-titles = get_music_titles("sample vids/slow_fullscreen_sample_vid.mp4")
+titles = get_music_titles("sample vids/fast_full_screen_sample_vid.mp4")
 
 links = []
 print("Fetching song links")
