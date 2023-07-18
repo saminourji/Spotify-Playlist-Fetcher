@@ -8,7 +8,7 @@ import pytesseract
 import pandas as pd
 import easyocr
 
-def get_music_titles(video:str):
+def get_music_titles(video:str, interval:int):
     # 1. INTIALIZE VARIABLES AND FOLDERS
     try: 
         shutil.rmtree("./frames")
@@ -34,7 +34,6 @@ def get_music_titles(video:str):
     cap = cv.VideoCapture(video)
     count = 0
     success, frame = cap.read()
-    interval = 1
 
     # 2. SAVE FRAMES AS IMAGES
     print("extracting frames")
