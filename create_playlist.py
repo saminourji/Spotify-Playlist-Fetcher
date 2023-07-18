@@ -10,20 +10,32 @@ sp = spotipy.Spotify(auth_manager=auth_manager)
 
 user_id = sp.me()["id"]
 
+# only get top result
 def search_track_url(query):
     search = sp.search(query, 1, 1, "track")
     return search["tracks"]["items"][0]["external_urls"]["spotify"]
 
-new_playlist = sp.user_playlist_create(user_id, "Fetched playlist #3", True, False, "")
+# get best of the top n results
+def search_best_url(tuple, n):
+    links = []
+    titles = []
+    if len(tuple) == 2:
+        search = sp.search(tuple[0].join(" ").join(tuple[1]), n, 0, "track")
+        for i in range(n):
+            links.append(search["tracks"]["items"][i]["external_urls"]["spotify"])
+            titles.append(search["tracks"]["items"][i]["name"])
 
-titles = get_music_titles("sample vids/fast_full_screen_sample_vid.mp4")
+new_playlist = sp.user_playlist_create(user_id, "Fetched playlist #4", True, False, "")
+
+song_info = get_music_titles("sample  vids/slow_fullscreen_sample_vid.mp4")
 
 links = []
 print("Fetching song links")
 pos = 0
-for title in titles:
-    print(title)
-    link = search_track_url(title)
+for info in song_info:
+    clean_title = [x for x in info.split("\n") if x != ""]
+    print(len(clean_title), clean_title)
+    link = search_best_url(info, 3)
     if link not in links:
         links.append(link)
         sp.playlist_add_items(new_playlist["id"], [link], pos)

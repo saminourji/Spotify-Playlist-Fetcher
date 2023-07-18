@@ -103,10 +103,10 @@ def get_music_titles(video:str):
         th, tw = template.shape[:2]
 
         best = None
-        for scale in  np.linspace(0.3, iw/tw, 10)[::-1]:
+        for scale in  np.linspace(0.3, iw/tw, 10)[::-1] :
             resized = imutils.resize(template, width = int(template.shape[1] * scale))
-            edged = cv.Canny(resized, 50, 200)
-            result= cv.matchTemplate(canny, edged, cv.TM_CCOEFF)
+            edged_sceen = cv.Canny(resized, 50, 200)
+            result= cv.matchTemplate(canny, edged_sceen, cv.TM_CCOEFF)
             _, max_val, _, max_loc= cv.minMaxLoc(result) 
             if best is None or max_val > best[0]:
                 best = (max_val, max_loc, scale)
@@ -124,7 +124,7 @@ def get_music_titles(video:str):
 
         _, max_loc, scale = best
         button_y = max_loc[1]
-        cropped_img = img[int(button_y-0.15*ih):int(button_y-0.05*ih),]
+        cropped_img = img[int(button_y-0.15*ih):int(button_y-0.05*ih),0:int(iw*.85)]
         cv.imwrite("./selected/slct %s.jpg" % str(j), cropped_img)
         # cv.imshow('test', cropped_img)
         # cv.waitKey(0)
@@ -135,6 +135,8 @@ def get_music_titles(video:str):
     # 5. TEXT RECOGNITION OF SONG TITLE / ARTIST
         # ref: https://medium.com/@draj0718/text-recognition-and-extraction-in-images-93d71a337fc8
 
+    pytesseract.pytesseract.tesseract_cmd = r'/usr/local/Cellar/tesseract/5.3.1_1/bin/tesseract'
+    config = ('-l eng — oem 3 — psm 3')
 
     titles = []
     for i in range(1, len(selected_frames)+1):
@@ -144,9 +146,7 @@ def get_music_titles(video:str):
         thresh = cv.threshold(noise, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
 
         #Tesseract:
-        pytesseract.pytesseract.tesseract_cmd = r'/usr/local/Cellar/tesseract/5.3.1_1/bin/tesseract'
-        config = ('-l eng — oem 3 — psm 3')
-        resultTSCT = pytesseract.image_to_string(thresh, config=config).replace("\n", " ").replace("|", "I")
+        resultTSCT = pytesseract.image_to_string(thresh, config=config).replace("|", "I")#.replace("\n", " ")
 
         print("Analyzing text in frame", i)
         # #EasyOCR:
