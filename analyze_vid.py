@@ -9,6 +9,14 @@ import pandas as pd
 import easyocr
 
 def get_music_titles(video:str, interval:int):
+    #0. DOWNLOAD VIDEO FROM URL
+    #source: https://www.geeksforgeeks.org/download-instagram-reel-using-python/
+    #struggled with instrascrape and insta loader
+    
+    
+    
+    
+    
     # 1. INTIALIZE VARIABLES AND FOLDERS
     try: 
         shutil.rmtree("./frames")

@@ -1,7 +1,7 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import apikeys #file containing api keys; not in version control
-from main import get_music_titles
+from analyze_vid import get_music_titles
 from difflib import SequenceMatcher
 
 def similar(a, b):
