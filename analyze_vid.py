@@ -11,7 +11,7 @@ import easyocr
 def get_music_titles(video:str, interval:int):
     #0. DOWNLOAD VIDEO FROM URL
     #source: https://www.geeksforgeeks.org/download-instagram-reel-using-python/
-    #struggled with instrascrape and insta loader
+    #struggled with instrascrape and insta loader; might implement this later
     
     
     
@@ -103,26 +103,59 @@ def get_music_titles(video:str, interval:int):
         j+=1
 
         img = cv.imread("frames/frame %s.jpg" % str(n))
-        ih, iw = img.shape[:2]
+        ih, iw = img.shape[:2] #returns height / width
 
         canny = cv.Canny(img, 50, 200)
-        template = cv.imread("play button.png")
-        th, tw = template.shape[:2]
+        #spotify play/pause/fwd button
+        spotify_template = cv.imread("spotify play button.png")
+        spotify_h, spotify_w = spotify_template.shape[:2]
 
-        best = None
-        for scale in  np.linspace(0.3, iw/tw, 10)[::-1] :
-            resized = imutils.resize(template, width = int(template.shape[1] * scale))
-            edged_sceen = cv.Canny(resized, 50, 200)
-            result= cv.matchTemplate(canny, edged_sceen, cv.TM_CCOEFF)
-            _, max_val, _, max_loc= cv.minMaxLoc(result) 
-            if best is None or max_val > best[0]:
-                best = (max_val, max_loc, scale)
+        #apple play/pause/fwd button
+        apple_template = cv.imread("apple play button.png")
+        apple_h, apple_w = apple_template.shape[:2]
+        
 
-        # #viz play button box
-        # _, max_loc, scale = best
-        # top_left = max_loc
-        # bottom_right= (int(top_left[0] + tw*scale), int(top_left[1] + th*scale))
-        # cv.rectangle(img, top_left, bottom_right, (0,0,255),5)
+        spotify_best = None
+        for scale in  np.linspace(0.3*iw/spotify_w, 0.7*iw/spotify_w, 20)[::-1] : 
+            spotify_resized = imutils.resize(spotify_template, width = int(spotify_template.shape[1] * scale))
+            spotify_edged = cv.Canny(spotify_resized, 50, 200)
+            spotify_result= cv.matchTemplate(canny, spotify_edged, cv.TM_CCOEFF)
+            _, max_val, _, max_loc= cv.minMaxLoc(spotify_result) 
+            
+            if spotify_best is None or max_val > spotify_best[0]:
+                spotify_best = (max_val, max_loc, scale)
+
+        apple_best = None
+        for scale in  np.linspace(0.3*iw/apple_w, 0.7*iw/apple_w, 20)[::-1] : #from 0.3 of screen to entire screen
+            apple_resized = imutils.resize(apple_template, width = int(apple_template.shape[1] * scale))
+            apple_edged = cv.Canny(apple_resized, 50, 200)
+            apple_result= cv.matchTemplate(canny, apple_edged, cv.TM_CCOEFF)
+            _, max_val, _, max_loc= cv.minMaxLoc(apple_result) 
+            
+            if apple_best is None or max_val > apple_best[0]:
+                apple_best = (max_val, max_loc, scale)
+
+        type = ""
+        if (apple_best[0] > spotify_best[0]):
+            best = apple_best
+            type = "apple"
+            tw, th = apple_w, apple_h
+        else:
+            best = spotify_best
+            type = "spotify"
+            tw, th = spotify_w, spotify_h
+
+        #viz play button box
+        _, max_loc, scale = best
+        top_left = max_loc
+        bottom_right= (int(top_left[0] + tw*scale), int(top_left[1] + th*scale))
+        if (type == "apple"):
+            cv.rectangle(img, top_left, bottom_right, (0,255,0),5)
+        else:
+            cv.rectangle(img, top_left, bottom_right, (0,0,255),5)
+        cv.imshow('test', img)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
         
         # #viz title-artist box
         # top_left = (0, int(button_y-0.15*ih))
@@ -131,11 +164,14 @@ def get_music_titles(video:str, interval:int):
 
         _, max_loc, scale = best
         button_y = max_loc[1]
-        cropped_img = img[int(button_y-0.15*ih):int(button_y-0.05*ih),0:int(iw*.85)]
+        if (type == "apple"):
+            cropped_img = img[int(button_y-0.125*ih):int(button_y-0.05*ih),0:int(iw*.85)]
+        else:
+            cropped_img = img[int(button_y-0.15*ih):int(button_y-0.05*ih),0:int(iw*.85)]
         cv.imwrite("./selected/slct %s.jpg" % str(j), cropped_img)
-        # cv.imshow('test', cropped_img)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
+        cv.imshow('test', cropped_img)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
         print("Cropping selected frame", j)
 
 
@@ -162,8 +198,9 @@ def get_music_titles(video:str, interval:int):
         
         titles.append(resultTSCT)
     titles = list(set(titles))
+    print(titles)
     return titles
-    # print(len(titles))
+
     
         
         

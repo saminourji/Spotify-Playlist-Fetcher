@@ -11,38 +11,42 @@ print("Setting up Spotify API")
 scope = ["user-read-private", "playlist-modify-public"]
 auth_manager = SpotifyOAuth(client_id = apikeys.CLIENT_ID, client_secret = apikeys.CLIENT_SECRET, redirect_uri = "http://localhost:3000", scope = scope)
 sp = spotipy.Spotify(auth_manager=auth_manager)
-path = "sample vids/sofia_same_title_sample_vid.mov"
+path = "sample vids/appleui_sample_vid.mp4"
 
 user_id = sp.me()["id"]
 
-# only get top result
-def search_track_url(query):
-    search = sp.search(query, 1, 1, "track")
-    return search["tracks"]["items"][0]["external_urls"]["spotify"]
+## FUNCTIONS
+
+# # only get top result
+# def search_track_url(query):
+#     search = sp.search(query, 1, 1, "track")
+#     return search["tracks"]["items"][0]["external_urls"]["spotify"]
 
 # get best of the top n results
-def search_best_url(tuple, n):
-    assert(len(tuple) == 2)
+def search_best_url(title_artist, n):
+    assert(len(title_artist) == 2)
 
-    # (title ratio, link, result nb)
+    # (title similarity, link, result nb)
     best = (None, None, None)
     
-    query = tuple[0] + " " + tuple[1].split(",")[0]
+    query = title_artist[0] + " " + title_artist[1].split(",")[0]
     search = sp.search(query, n, 0, "track")
     print(" - " + query)
     result_nb = len(search["tracks"]["items"])
     for i in range(min(result_nb, n)):
-        compare_title = similar(search["tracks"]["items"][i]["name"], tuple[0])
+        compare_title = similar(search["tracks"]["items"][i]["name"], title_artist[0])
         # print(f'TITLE score: {compare_title} between actual: {tuple[0]} and fetched: {search["tracks"]["items"][i]["name"]}')
-        compare_artist = similar(search["tracks"]["items"][i]["artists"][0]["name"], tuple[1].split(",")[0])
+        compare_artist = similar(search["tracks"]["items"][i]["artists"][0]["name"], title_artist[1].split(",")[0])
         # print(f'ARTIST score: {compare_artist} between actual: {tuple[1].split(",")[0]} and fetched: {search["tracks"]["items"][i]["artists"][0]["name"]}')
         if best == (None, None, None) or (compare_title > best[0] and compare_artist > 0.2):
             best = (compare_title, search["tracks"]["items"][i]["external_urls"]["spotify"], i)
-            #if perfect match, no need to look at the other cases
+            #if perfect match, n..o need to look at the other cases
             if compare_title == 1:
                 return best
     # print(f"{best}for {tuple[0]} by {tuple[1]}")
     return best
+
+## PLAYLIST CREATION
 
 new_playlist = sp.user_playlist_create(user_id, f"Playlist for {path}", True, False, "")
 
@@ -59,13 +63,15 @@ for info in song_info:
     if len(split_info) == 2:
         ratio, link, _ = search_best_url(split_info, 3)
         if link != None and link not in links:
-            print("Ration: ", ratio)
+            print("Ratio: ", ratio)
             if ratio >= 0.5:
                 total_ratio += ratio
                 links.append(link)
             else: omitted += 1
     else: omitted += 1
-accuracy = round(100*total_ratio/len(links), 2)
+accuracy = 0
+if (len(links) != 0):
+    accuracy = round(100*total_ratio/len(links), 2)
 sp.playlist_add_items(new_playlist["id"], links, 0)
 sp.playlist_change_details(new_playlist["id"], description = f"Omitted song due to analysis error: {omitted} \n Accuracy: {accuracy}")
 print(omitted)
