@@ -11,7 +11,7 @@ print("Setting up Spotify API")
 scope = ["user-read-private", "playlist-modify-public"]
 auth_manager = SpotifyOAuth(client_id = apikeys.CLIENT_ID, client_secret = apikeys.CLIENT_SECRET, redirect_uri = "http://localhost:3000", scope = scope)
 sp = spotipy.Spotify(auth_manager=auth_manager)
-path = "sample vids/appleui_sample_vid.mp4"
+path = "sample vids/appleui_sample_vid_mid_speed.mp4"
 
 user_id = sp.me()["id"]
 
@@ -64,7 +64,7 @@ for info in song_info:
         ratio, link, _ = search_best_url(split_info, 3)
         if link != None and link not in links:
             print("Ratio: ", ratio)
-            if ratio >= 0.5:
+            if ratio >= 0.2:
                 total_ratio += ratio
                 links.append(link)
             else: omitted += 1
@@ -75,7 +75,7 @@ if (len(links) != 0):
 sp.playlist_add_items(new_playlist["id"], links, 0)
 sp.playlist_change_details(new_playlist["id"], description = f"Omitted song due to analysis error: {omitted} \n Accuracy: {accuracy}")
 print(omitted)
-print(f'Success!, With an accuracy of {accuracy} Here is the link to your generated playlist: {new_playlist["external_urls"]["spotify"]}')
+print(f'Success!, With an accuracy of {accuracy} and {omitted} omitted songs. Here is the link to your generated playlist: {new_playlist["external_urls"]["spotify"]}')
 
 
 

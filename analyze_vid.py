@@ -116,8 +116,8 @@ def get_music_titles(video:str, interval:int):
         
 
         spotify_best = None
-        for scale in  np.linspace(0.3*iw/spotify_w, 0.7*iw/spotify_w, 20)[::-1] : 
-            spotify_resized = imutils.resize(spotify_template, width = int(spotify_template.shape[1] * scale))
+        for scale in  np.linspace(0.3, 0.7, 20)[::-1] : 
+            spotify_resized = imutils.resize(spotify_template, width = int(iw * scale))
             spotify_edged = cv.Canny(spotify_resized, 50, 200)
             spotify_result= cv.matchTemplate(canny, spotify_edged, cv.TM_CCOEFF)
             _, max_val, _, max_loc= cv.minMaxLoc(spotify_result) 
@@ -126,8 +126,8 @@ def get_music_titles(video:str, interval:int):
                 spotify_best = (max_val, max_loc, scale)
 
         apple_best = None
-        for scale in  np.linspace(0.3*iw/apple_w, 0.7*iw/apple_w, 20)[::-1] : #from 0.3 of screen to entire screen
-            apple_resized = imutils.resize(apple_template, width = int(apple_template.shape[1] * scale))
+        for scale in  np.linspace(0.3, 0.7, 20)[::-1] : #from 0.3 of screen to entire screen
+            apple_resized = imutils.resize(apple_template, width = int(iw * scale))
             apple_edged = cv.Canny(apple_resized, 50, 200)
             apple_result= cv.matchTemplate(canny, apple_edged, cv.TM_CCOEFF)
             _, max_val, _, max_loc= cv.minMaxLoc(apple_result) 
@@ -188,8 +188,18 @@ def get_music_titles(video:str, interval:int):
         noise = cv.medianBlur(gray,3)
         thresh = cv.threshold(noise, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)[1]
 
+        # cv.imshow('test', gray)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+        # cv.imshow('test', noise)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+        # cv.imshow('test', thresh)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+
         #Tesseract:
-        resultTSCT = pytesseract.image_to_string(thresh, config=config).replace("|", "I")#.replace("\n", " ")
+        resultTSCT = pytesseract.image_to_string(gray, config=config).replace("|", "I")#.replace("\n", " ")
 
         print("Analyzing text in frame", i)
         # #EasyOCR:
